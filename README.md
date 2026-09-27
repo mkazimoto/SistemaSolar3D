@@ -92,10 +92,14 @@ docs/                          capturas de tela usadas neste README
 
 ## Publicação
 
-O workflow usa o fluxo de artefato do Pages (`configure-pages` → `upload-pages-artifact`
-→ `deploy-pages`) e publica apenas o `index.html`, sem etapa de build. Ele roda em todo
-push na `main` que altere `index.html` (ou o próprio workflow) e também pode ser
+O workflow `.github/workflows/deploy-pages.yml` usa o fluxo de artefato do Pages
+(`configure-pages` → `upload-pages-artifact` → `deploy-pages`) e publica apenas o
+`index.html`, sem etapa de build. Ele roda em todo push na `main` e também pode ser
 disparado manualmente em **Actions → Publicar no GitHub Pages → Run workflow**.
 
-Para habilitar o Pages na primeira execução, mantenha em **Settings → Pages** a origem
-**GitHub Actions** (o workflow já tenta habilitar isso automaticamente).
+> **Passo único, feito uma vez pelo dono do repositório:** em **Settings → Pages**,
+defina **Source = GitHub Actions**. O `GITHUB_TOKEN` do workflow não tem permissão para
+criar o site do Pages por conta própria (`Resource not accessible by integration` no
+`POST /pages`), então essa configuração precisa ser feita por você — depois disso os
+deploys são 100% automáticos. Enquanto o Pages não estiver habilitado, o workflow falha
+logo no início com uma mensagem explicando exatamente isso.

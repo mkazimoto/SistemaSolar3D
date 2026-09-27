@@ -1,12 +1,14 @@
 name: Publicar no GitHub Pages
 
 # Publica o site estático (index.html) no GitHub Pages a cada push na main.
+#
+# Pré-requisito (uma única vez): em Settings → Pages, definir Source = "GitHub Actions".
+# O GITHUB_TOKEN não consegue criar o site do Pages por conta própria
+# (POST /pages retorna "Resource not accessible by integration"), por isso esse
+# ajuste é manual; depois dele os deploys são totalmente automáticos.
 on:
   push:
     branches: [main]
-    paths:
-      - 'index.html'
-      - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
 # Permissões exigidas pelo fluxo de artefato do Pages
@@ -26,7 +28,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Verificar se o Pages está habilitado
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages")
+          echo "GET /repos/${{ github.repository }}/pages -> HTTP $code"
+          if [ "$code" = "200" ]; then
+            echo "Pages já está habilitado — seguindo com o deploy."
+          elif [ "$code" = "404" ]; then
+            echo "::error::GitHub Pages ainda não está habilitado. Abra Settings → Pages, escolha 'Source: GitHub Actions' e rode este workflow novamente."
+            exit 1
+          else
+            echo "::error::Não foi possível consultar a API do Pages (HTTP $code)."
+            exit 1
+          fi
 
       - name: Montar artefato estático
         run: |
@@ -40,9 +61,6 @@ jobs:
 
       - name: Configurar Pages
         uses: actions/configure-pages@v5
-        with:
-          # Habilita o Pages automaticamente (source = GitHub Actions) se ainda não existir
-          enablement: true
 
       - name: Enviar artefato
         uses: actions/upload-pages-artifact@v3
