@@ -1,0 +1,9 @@
+# Artefatos de ferramentas / testes
+.playwright-mcp/
+*.log
+*.tmp
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store
