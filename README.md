@@ -2,13 +2,19 @@
 
 Animação interativa do Sistema Solar em tempo real, feita com **Three.js** (WebGL) em um único arquivo HTML — sem build, sem instalação.
 
-![stack](https://img.shields.io/badge/three.js-0.169-6cf) ![sem build](https://img.shields.io/badge/build-nenhum-ffb347)
+![stack](https://img.shields.io/badge/three.js-0.169-6cf) ![sem build](https://img.shields.io/badge/build-nenhum-ffb347) [![Demo](https://img.shields.io/badge/demo-GitHub%20Pages-2ea44f?logo=github)](https://mkazimoto.github.io/SistemaSolar3D/)
+
+**▶ Demo ao vivo: <https://mkazimoto.github.io/SistemaSolar3D/>**
 
 ![Sistema Solar 3D — vista geral do sistema com órbitas, cinturões e o cometa 1P/Halley](docs/preview.png)
 
 <sub>Vista geral: órbitas keplerianas, cinturão de asteroides, Cinturão de Kuiper, o cometa 1P/Halley e a data simulada no cabeçalho.</sub>
 
 ## Como executar
+
+**Opção 0 — online**
+Abra <https://mkazimoto.github.io/SistemaSolar3D/> (publicado automaticamente pelo workflow
+`.github/workflows/deploy-pages.yml` a cada push na `main`).
 
 **Opção 1 — direto no navegador**
 Dê um duplo clique em `index.html`.
@@ -77,8 +83,19 @@ Vista aproximada de Saturno: bandas atmosféricas, anéis com a Divisão de Cass
 ## Estrutura
 
 ```
-index.html    aplicação completa (HTML + CSS + JS em módulo)
-servidor.js   servidor estático mínimo, sem dependências (Node)
-servir.bat    sobe o servidor e abre o navegador
-docs/         capturas de tela usadas neste README
+index.html                     aplicação completa (HTML + CSS + JS em módulo)
+servidor.js                    servidor estático mínimo, sem dependências (Node)
+servir.bat                     sobe o servidor e abre o navegador
+docs/                          capturas de tela usadas neste README
+.github/workflows/deploy-pages.yml   publicação automática no GitHub Pages
 ```
+
+## Publicação
+
+O workflow usa o fluxo de artefato do Pages (`configure-pages` → `upload-pages-artifact`
+→ `deploy-pages`) e publica apenas o `index.html`, sem etapa de build. Ele roda em todo
+push na `main` que altere `index.html` (ou o próprio workflow) e também pode ser
+disparado manualmente em **Actions → Publicar no GitHub Pages → Run workflow**.
+
+Para habilitar o Pages na primeira execução, mantenha em **Settings → Pages** a origem
+**GitHub Actions** (o workflow já tenta habilitar isso automaticamente).
