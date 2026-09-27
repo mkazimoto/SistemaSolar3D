@@ -55,12 +55,25 @@ jobs:
             exit 1
           fi
 
-          if printf '%s' "$body" | grep -q '"build_type":"workflow"'; then
+          echo "Resposta da API do Pages: $body"
+
+          # Detecta o tipo de build com jq (disponível nos runners) e, se faltar,
+          # com um fallback que normaliza espaços — evita falso negativo em JSON formatado.
+          build_type=$(printf '%s' "$body" | jq -r '.build_type // empty' 2>/dev/null || true)
+          if [ -z "$build_type" ]; then
+            build_type=$(printf '%s' "$body" | tr -d ' \t\r\n' | grep -o '"build_type":"[a-z]*"' | cut -d'"' -f4 || true)
+          fi
+          echo "build_type detectado: ${build_type:-desconhecido}"
+
+          # Só ignora o deploy quando houver certeza de que a origem é um branch.
+          # Em qualquer outro caso tenta publicar: falha explícita é melhor do que
+          # um deploy silenciosamente ignorado (site ficaria 404 sem aviso).
+          if [ "$build_type" = "legacy" ]; then
+            echo "mode=branch" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Pages publicando a partir de um branch::O site é publicado pela origem em branch, então o deploy por artefato foi ignorado. Para passar a usar este workflow, defina Source = 'GitHub Actions' em Settings → Pages."
+          else
             echo "mode=workflow" >> "$GITHUB_OUTPUT"
             echo "Pages configurado para GitHub Actions — o deploy por artefato será feito."
-          else
-            echo "mode=branch" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Pages publicando a partir de um branch::O site é publicado pela origem em branch, então o deploy por artefato foi ignorado — nenhuma ação é necessária. Para passar a usar este workflow, defina Source = 'GitHub Actions' em Settings → Pages."
           fi
 
       - name: Montar artefato estático
