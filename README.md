@@ -4,7 +4,7 @@ Animação interativa do Sistema Solar em tempo real, feita com **Three.js** (We
 
 ![stack](https://img.shields.io/badge/three.js-0.169-6cf) ![sem build](https://img.shields.io/badge/build-nenhum-ffb347) [![Demo](https://img.shields.io/badge/demo-GitHub%20Pages-2ea44f?logo=github)](https://mkazimoto.github.io/SistemaSolar3D/)
 
-**▶ Demo ao vivo: <https://mkazimoto.github.io/SistemaSolar3D/>**
+**▶ Demo ao vivo: <https://mkazimoto.github.io/SistemaSolar3D/>** — entra no ar após habilitar o Pages **uma única vez** (veja [Publicação](#publicação)).
 
 ![Sistema Solar 3D — vista geral do sistema com órbitas, cinturões e o cometa 1P/Halley](docs/preview.png)
 
