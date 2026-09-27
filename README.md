@@ -4,6 +4,10 @@ Animação interativa do Sistema Solar em tempo real, feita com **Three.js** (We
 
 ![stack](https://img.shields.io/badge/three.js-0.169-6cf) ![sem build](https://img.shields.io/badge/build-nenhum-ffb347)
 
+![Sistema Solar 3D — vista geral do sistema com órbitas, cinturões e o cometa 1P/Halley](docs/preview.png)
+
+<sub>Vista geral: órbitas keplerianas, cinturão de asteroides, Cinturão de Kuiper, o cometa 1P/Halley e a data simulada no cabeçalho.</sub>
+
 ## Como executar
 
 **Opção 1 — direto no navegador**
@@ -64,10 +68,17 @@ As distâncias e os tamanhos são **comprimidos** para caber na tela de forma le
 (distância ∝ √AU, raio ∝ R^0,55) — a proporção entre órbitas e períodos, porém, é
 astronomicamente correta.
 
+## Capturas
+
+Vista aproximada de Saturno: bandas atmosféricas, anéis com a Divisão de Cassini e as luas Titã e Encélado.
+
+![Saturno em detalhe, com anéis e luas](docs/saturno.png)
+
 ## Estrutura
 
 ```
 index.html    aplicação completa (HTML + CSS + JS em módulo)
 servidor.js   servidor estático mínimo, sem dependências (Node)
 servir.bat    sobe o servidor e abre o navegador
+docs/         capturas de tela usadas neste README
 ```

@@ -458,7 +458,7 @@ const SUN_INFO = {
 
 const PLANETS = [
   {
-    key: 'mercury', name: 'Mercúrio', a: 0.3871, e: 0.2056, periodYears: 0.2408, incl: 7.005, node: 48, M0: 0.3,
+    key: 'mercury', name: 'Mercúrio', a: 0.3871, e: 0.2056, periodYears: 0.2408, incl: 7.005, node: 48, M0: 0.2,
     radiusEarth: 0.383, tilt: 0.034, rotHours: 1407.6,
     tex: { type: 'rocky', base: [150, 140, 130], dark: [72, 66, 62], light: [206, 198, 188], craters: 160, freq: 8, seed: 11, contrast: 1.2 },
     atmo: { color: 0x9fb4d8, strength: 0.12, power: 4 },
@@ -466,7 +466,7 @@ const PLANETS = [
     desc: 'O menor planeta e o mais rápido: completa uma volta ao redor do Sol em apenas 88 dias, mas leva 58,6 dias para girar sobre si mesmo.'
   },
   {
-    key: 'venus', name: 'Vênus', a: 0.7233, e: 0.0068, periodYears: 0.6152, incl: 3.395, node: 77, M0: 2.7,
+    key: 'venus', name: 'Vênus', a: 0.7233, e: 0.0068, periodYears: 0.6152, incl: 3.395, node: 77, M0: 2.95,
     radiusEarth: 0.949, tilt: 177.4, rotHours: -5832.5,
     tex: { type: 'gas', seed: 21, bands: 14, contrast: 0.14, stops: [[0, [186, 152, 104]], [0.35, [226, 198, 148]], [0.6, [244, 222, 176]], [1, [206, 182, 138]]] },
     atmo: { color: 0xffd9a0, strength: 0.55, power: 2.6 },
@@ -474,7 +474,7 @@ const PLANETS = [
     desc: 'O planeta mais quente do sistema solar. A densa atmosfera de CO₂ cria um efeito estufa desenfreado — e gira ao contrário de quase todos os planetas.'
   },
   {
-    key: 'earth', name: 'Terra', a: 1.0, e: 0.0167, periodYears: 1.0, incl: 0.0, node: 0, M0: 1.0,
+    key: 'earth', name: 'Terra', a: 1.0, e: 0.0167, periodYears: 1.0, incl: 0.0, node: 0, M0: 1.4,
     radiusEarth: 1.0, tilt: 23.44, rotHours: 23.934,
     earth: true,
     atmo: { color: 0x6fb4ff, strength: 0.85, power: 2.4 },
@@ -483,7 +483,7 @@ const PLANETS = [
     desc: 'O único mundo conhecido com água líquida em abundância na superfície — e o único onde a vida foi confirmada.'
   },
   {
-    key: 'mars', name: 'Marte', a: 1.5237, e: 0.0934, periodYears: 1.8808, incl: 1.85, node: 49, M0: 5.6,
+    key: 'mars', name: 'Marte', a: 1.5237, e: 0.0934, periodYears: 1.8808, incl: 1.85, node: 49, M0: 4.5,
     radiusEarth: 0.532, tilt: 25.19, rotHours: 24.623,
     tex: { type: 'rocky', base: [176, 96, 58], dark: [104, 52, 34], light: [214, 156, 114], craters: 90, freq: 6, seed: 31, contrast: 1.15 },
     atmo: { color: 0xffb08a, strength: 0.2, power: 3.4 },
@@ -495,7 +495,7 @@ const PLANETS = [
     desc: 'Abriga o Monte Olimpo, o maior vulcão do sistema solar, com 22 km de altura — quase três Everest.'
   },
   {
-    key: 'jupiter', name: 'Júpiter', a: 5.2026, e: 0.0489, periodYears: 11.862, incl: 1.303, node: 100, M0: 3.4,
+    key: 'jupiter', name: 'Júpiter', a: 5.2026, e: 0.0489, periodYears: 11.862, incl: 1.303, node: 100, M0: 3.6,
     radiusEarth: 11.209, tilt: 3.13, rotHours: 9.925,
     tex: { type: 'gas', seed: 51, bands: 34, contrast: 0.17, spot: true,
       stops: [[0, [156, 132, 106]], [0.18, [214, 196, 166]], [0.36, [176, 138, 106]], [0.52, [232, 218, 194]],
@@ -511,7 +511,7 @@ const PLANETS = [
     desc: 'O gigante do sistema: caberiam 1.300 Terras em seu interior. A Grande Mancha Vermelha é uma tempestade maior que o nosso planeta, ativa há séculos.'
   },
   {
-    key: 'saturn', name: 'Saturno', a: 9.5549, e: 0.0565, periodYears: 29.457, incl: 2.489, node: 113, M0: 0.6,
+    key: 'saturn', name: 'Saturno', a: 9.5549, e: 0.0565, periodYears: 29.457, incl: 2.489, node: 113, M0: 0.75,
     radiusEarth: 9.449, tilt: 26.73, rotHours: 10.656,
     tex: { type: 'gas', seed: 61, bands: 22, contrast: 0.1,
       stops: [[0, [186, 164, 122]], [0.3, [226, 208, 168]], [0.55, [244, 232, 200]], [0.8, [216, 196, 156]], [1, [178, 156, 120]]] },
@@ -525,7 +525,7 @@ const PLANETS = [
     desc: 'Seus anéis se estendem por 280 mil km, mas têm em média só 10 metros de espessura. É menos denso que a água: flutuaria num oceano gigante.'
   },
   {
-    key: 'uranus', name: 'Urano', a: 19.2184, e: 0.0457, periodYears: 84.02, incl: 0.773, node: 74, M0: 2.4,
+    key: 'uranus', name: 'Urano', a: 19.2184, e: 0.0457, periodYears: 84.02, incl: 0.773, node: 74, M0: 2.2,
     radiusEarth: 4.007, tilt: 97.77, rotHours: -17.24,
     tex: { type: 'gas', seed: 71, bands: 10, contrast: 0.07,
       stops: [[0, [140, 200, 208]], [0.45, [178, 226, 232]], [1, [148, 208, 216]]] },
@@ -536,7 +536,7 @@ const PLANETS = [
     desc: 'Gira deitado: seu eixo é inclinado 98°, provavelmente por uma colisão colossal. Cada polo passa 42 anos na luz e 42 na escuridão.'
   },
   {
-    key: 'neptune', name: 'Netuno', a: 30.1104, e: 0.0113, periodYears: 164.79, incl: 1.77, node: 131, M0: 5.0,
+    key: 'neptune', name: 'Netuno', a: 30.1104, e: 0.0113, periodYears: 164.79, incl: 1.77, node: 131, M0: 5.1,
     radiusEarth: 3.883, tilt: 28.32, rotHours: 16.11,
     tex: { type: 'gas', seed: 81, bands: 14, contrast: 0.09,
       stops: [[0, [36, 68, 158]], [0.4, [66, 108, 208]], [0.7, [104, 148, 232]], [1, [46, 84, 176]]] },
@@ -575,7 +575,7 @@ maxAniso = renderer.capabilities.getMaxAnisotropy();
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.3, 8000);
-camera.position.set(0, 168, 228);
+camera.position.set(0, 180, 188);
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
@@ -867,7 +867,7 @@ function makeAsteroidBelt() {
 }
 function makeKuiperBelt() {
   const r = rndFrom(9090);
-  const n = 7000, pos = new Float32Array(n * 3);
+  const n = 4800, pos = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
     const a = 30 + Math.pow(r(), 0.7) * 22;
     const rad = auToScene(a);
@@ -878,7 +878,7 @@ function makeKuiperBelt() {
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  return new THREE.Points(g, new THREE.PointsMaterial({ size: 1.15, color: 0x93a9c9, transparent: true, opacity: 0.4, depthWrite: false, sizeAttenuation: false }));
+  return new THREE.Points(g, new THREE.PointsMaterial({ size: 1.0, color: 0x8ea3c4, transparent: true, opacity: 0.3, depthWrite: false, sizeAttenuation: false }));
 }
 
 /* --- Cometa Halley ----------------------------------------------------- */
@@ -1079,7 +1079,7 @@ els.btnReset.addEventListener('click', () => {
   releaseFollow();
   els.focus.value = '';
   select(allBodies.find(b => b.key === 'sun'), { focus: false });
-  state.zoomAnim = { t: 0, dur: 1.1, from: camera.position.clone(), dir: new THREE.Vector3(0, 168, 228), body: null };
+  state.zoomAnim = { t: 0, dur: 1.1, from: camera.position.clone(), dir: new THREE.Vector3(0, 180, 188), body: null };
 });
 
 /* clique para focar */
