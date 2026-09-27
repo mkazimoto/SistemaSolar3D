@@ -4,7 +4,7 @@ Animação interativa do Sistema Solar em tempo real, feita com **Three.js** (We
 
 ![stack](https://img.shields.io/badge/three.js-0.169-6cf) ![sem build](https://img.shields.io/badge/build-nenhum-ffb347) [![Demo](https://img.shields.io/badge/demo-GitHub%20Pages-2ea44f?logo=github)](https://mkazimoto.github.io/SistemaSolar3D/)
 
-**▶ Demo ao vivo: <https://mkazimoto.github.io/SistemaSolar3D/>** — entra no ar após habilitar o Pages **uma única vez** (veja [Publicação](#publicação)).
+**▶ Demo ao vivo: <https://mkazimoto.github.io/SistemaSolar3D/>** — publicado pelo GitHub Pages (veja [Publicação](#publicação)).
 
 ![Sistema Solar 3D — vista geral do sistema com órbitas, cinturões e o cometa 1P/Halley](docs/preview.png)
 
@@ -87,19 +87,23 @@ index.html                     aplicação completa (HTML + CSS + JS em módulo)
 servidor.js                    servidor estático mínimo, sem dependências (Node)
 servir.bat                     sobe o servidor e abre o navegador
 docs/                          capturas de tela usadas neste README
+.nojekyll                      publica os arquivos como estão (sem processamento Jekyll)
 .github/workflows/deploy-pages.yml   publicação automática no GitHub Pages
 ```
 
 ## Publicação
 
-O workflow `.github/workflows/deploy-pages.yml` usa o fluxo de artefato do Pages
-(`configure-pages` → `upload-pages-artifact` → `deploy-pages`) e publica apenas o
-`index.html`, sem etapa de build. Ele roda em todo push na `main` e também pode ser
-disparado manualmente em **Actions → Publicar no GitHub Pages → Run workflow**.
+O workflow `.github/workflows/deploy-pages.yml` publica o `index.html` no GitHub Pages sem etapa
+de build, a cada push na `main` (ou manualmente em **Actions → Publicar no GitHub Pages → Run
+workflow**). Ele se adapta às duas formas de configuração do Pages e nunca falha por causa da
+origem escolhida:
 
-> **Passo único, feito uma vez pelo dono do repositório:** em **Settings → Pages**,
-defina **Source = GitHub Actions**. O `GITHUB_TOKEN` do workflow não tem permissão para
-criar o site do Pages por conta própria (`Resource not accessible by integration` no
-`POST /pages`), então essa configuração precisa ser feita por você — depois disso os
-deploys são 100% automáticos. Enquanto o Pages não estiver habilitado, o workflow falha
-logo no início com uma mensagem explicando exatamente isso.
+| Origem em Settings → Pages | O que o workflow faz |
+|---|---|
+| **GitHub Actions** (recomendado) | Monta `_site/` com o `index.html` e publica por artefato (`configure-pages` → `upload-pages-artifact` → `deploy-pages`). Só o `index.html` vai para o ar, e o deploy é registrado no ambiente `github-pages`. |
+| **Deploy from a branch** | Detecta a origem em branch, emite um aviso (`::warning`) e ignora o deploy por artefato — o site é publicado pela própria origem. A execução termina verde, sem falsos negativos. |
+
+> Enquanto o Pages **não estiver habilitado**, o workflow falha logo no início com a orientação
+de habilitá-lo: o `GITHUB_TOKEN` não tem permissão para criar o site do Pages (a action
+`configure-pages` exige um PAT com escopo `repo`, ou um GitHub App com `administration:write` +
+`pages:write`). Esse passo único é feito pelo dono do repositório.

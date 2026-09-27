@@ -27,11 +27,14 @@ jobs:
   build:
     name: Montar site
     runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.pages.outputs.mode }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Verificar se o Pages está habilitado
+      - name: Verificar configuração do Pages
+        id: pages
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -51,13 +54,17 @@ jobs:
             echo "::error title=Falha ao consultar o Pages::A API respondeu HTTP $code."
             exit 1
           fi
-          if ! printf '%s' "$body" | grep -q '"build_type":"workflow"'; then
-            echo "::error title=Troque a origem do Pages::O Pages está publicando a partir de um branch. Em Settings → Pages → Source, selecione 'GitHub Actions'."
-            exit 1
+
+          if printf '%s' "$body" | grep -q '"build_type":"workflow"'; then
+            echo "mode=workflow" >> "$GITHUB_OUTPUT"
+            echo "Pages configurado para GitHub Actions — o deploy por artefato será feito."
+          else
+            echo "mode=branch" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Pages publicando a partir de um branch::O site é publicado pela origem em branch, então o deploy por artefato foi ignorado — nenhuma ação é necessária. Para passar a usar este workflow, defina Source = 'GitHub Actions' em Settings → Pages."
           fi
-          echo "Pages habilitado e configurado para GitHub Actions."
 
       - name: Montar artefato estático
+        if: steps.pages.outputs.mode == 'workflow'
         run: |
           set -euo pipefail
           test -f index.html || { echo "::error::index.html não encontrado"; exit 1; }
@@ -67,9 +74,11 @@ jobs:
           find _site -type f | sort
 
       - name: Configurar Pages
+        if: steps.pages.outputs.mode == 'workflow'
         uses: actions/configure-pages@v6
 
       - name: Enviar artefato
+        if: steps.pages.outputs.mode == 'workflow'
         uses: actions/upload-pages-artifact@v5
         with:
           path: _site
@@ -77,6 +86,7 @@ jobs:
   deploy:
     name: Publicar
     needs: build
+    if: needs.build.outputs.mode == 'workflow'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
