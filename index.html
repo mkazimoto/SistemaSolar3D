@@ -240,6 +240,50 @@
   <p id="progressText">Carregando three.js do CDN…</p>
 </div>
 
+<script>
+  /* Watchdog de carregamento: evita a tela de "loading" infinita se o CDN falhar. */
+  (function () {
+    let concluido = false;
+    let timer;
+    const mostrarErro = (err, dica) => {
+      if (concluido) return;
+      concluido = true;
+      clearTimeout(timer);
+      if (err) console.error(err);
+      const carregando = document.getElementById('loading');
+      if (!carregando) return;
+      carregando.classList.remove('hide');
+      carregando.querySelector('h2').textContent = 'Não foi possível iniciar';
+      const p = document.getElementById('progressText');
+      p.textContent = dica || 'Ocorreu um erro ao carregar a aplicação.';
+      if (err && err.message) {
+        const detalhe = document.createElement('span');
+        detalhe.style.cssText = 'display:block;margin-top:6px;opacity:.7;font-size:10.5px';
+        detalhe.textContent = String(err.message);
+        p.appendChild(detalhe);
+      }
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = 'Tentar novamente';
+      btn.style.cssText = 'margin-top:10px;padding:7px 14px;border-radius:9px;' +
+        'border:1px solid rgba(150,190,255,.35);background:rgba(255,255,255,.08);color:#e8eefb;cursor:pointer';
+      btn.addEventListener('click', () => location.reload());
+      p.appendChild(btn);
+    };
+    window.SolarBoot = { ready() { concluido = true; clearTimeout(timer); }, fail: mostrarErro };
+    timer = setTimeout(() => mostrarErro(
+      new Error('Tempo esgotado ao baixar three.js'),
+      'Falha ao carregar a biblioteca Three.js do CDN. Verifique sua conexão com a internet e tente novamente.'
+    ), 25000);
+    addEventListener('error', (e) => {
+      if (e && e.target && e.target.tagName === 'SCRIPT') {
+        mostrarErro(e, 'Falha ao baixar o three.js do CDN. Verifique sua conexão com a internet e tente novamente.');
+      }
+    }, true);   // fase de captura: erros de carregamento de recurso não borbulham
+    addEventListener('unhandledrejection', (e) => mostrarErro(e.reason || e));
+  })();
+</script>
+
 <script type="importmap">
 {
   "imports": {
@@ -634,11 +678,9 @@ const isTouch = matchMedia('(pointer:coarse)').matches;
 document.documentElement.classList.toggle('mobile', MOBILE);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MOBILE ? 1.5 : 1.75));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
-maxAniso = Math.min(renderer.capabilities.getMaxAnisotropy(), MOBILE ? 4 : 16);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.3, 8000);
@@ -656,12 +698,20 @@ const labelRenderer = new CSS2DRenderer({ element: document.getElementById('labe
 labelRenderer.setSize(window.innerWidth, window.innerHeight);
 
 const composer = new EffectComposer(renderer);
-composer.setPixelRatio(MOBILE ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
 composer.setSize(window.innerWidth, window.innerHeight);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.45, 0.22, 1.05);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
+
+/* qualidade adaptativa: reavaliada a cada resize/orientação (toque ou telas pequenas) */
+function applyQuality() {
+  const pequeno = isTouch || Math.min(window.innerWidth, window.innerHeight) < 820;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, pequeno ? 1.5 : 1.75));
+  composer.setPixelRatio(pequeno ? 1 : Math.min(window.devicePixelRatio || 1, 1.5));
+  maxAniso = Math.min(renderer.capabilities.getMaxAnisotropy(), pequeno ? 4 : 16);
+}
+applyQuality();
 
 scene.add(new THREE.AmbientLight(0x2a3550, 0.55));
 const sunLight = new THREE.PointLight(0xfff2dc, 3.4, 0, 0);
@@ -813,6 +863,7 @@ function buildPlanet(p) {
     pts.push(new THREE.Vector3(Math.cos(nu) * rad, Math.sin(nu) * rad, 0));
   }
   const orbitMat = new THREE.LineBasicMaterial({ color: 0x6d8fc7, transparent: true, opacity: 0.3 });
+  orbitMat.userData.baseOpacity = 0.3;
   const orbitLine = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), orbitMat);
   orbitPlane.add(orbitLine);
 
@@ -859,7 +910,8 @@ function buildPlanet(p) {
   for (const m of (p.moons || [])) {
     const mr = Math.max(0.055, radiusToScene(m.radiusEarth) * MOON_SCALE);
     const pivot = new THREE.Object3D();
-    pivot.rotation.y = Math.random() * TAU;
+    // mesma fase usada em updateBodies() para simDays = 0 (determinístico, sem salto no 1º quadro)
+    pivot.rotation.y = ((m.seed % 100) / 100) * TAU;
     axis.add(pivot);
     const mh = new THREE.Object3D();
     mh.position.x = m.dist * MOON_DIST;
@@ -964,7 +1016,9 @@ function makeComet() {
     pts.push(new THREE.Vector3(Math.cos(nu) * rad, Math.sin(nu) * rad, 0));
   }
   const orbitMat = new THREE.LineBasicMaterial({ color: 0x7fe0ff, transparent: true, opacity: 0.22 });
-  plane.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), orbitMat));
+  orbitMat.userData.baseOpacity = 0.22;
+  const orbitLine = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), orbitMat);
+  plane.add(orbitLine);
 
   const holder = new THREE.Object3D();
   plane.add(holder);
@@ -993,11 +1047,11 @@ function makeComet() {
   }));
   scene.add(tail);
 
-  const body = { key: 'comet', name: '1P/Halley', radiusVisual: 1.2, holder, mesh: nucleus, label, info: COMET_INFO, comet: true };
+  const body = { key: 'comet', name: '1P/Halley', radiusVisual: 1.2, holder, mesh: nucleus, label, info: COMET_INFO, comet: true, orbitMat, orbitLine };
   nucleus.userData.body = body;
   allBodies.push(body);
 
-  return { node, plane, holder, tail, tailPos, jitter, body, coma, label };
+  return { node, plane, holder, tail, tailPos, jitter, body, coma, label, orbitLine };
 }
 
 /* =========================================================================
@@ -1108,7 +1162,7 @@ function select(body, opts = {}) {
     if (b.label) b.label.element.classList.toggle('sel', b === body);
   }
   for (const b of allBodies) {
-    if (b.orbitMat) b.orbitMat.opacity = b === body ? 0.75 : 0.3;
+    if (b.orbitMat) b.orbitMat.opacity = b === body ? 0.75 : (b.orbitMat.userData.baseOpacity ?? 0.3);
   }
   ui.info(body.info);
   if (opts.focus !== false) focusBody(body);
@@ -1228,7 +1282,9 @@ function bindUI() {
   els.btnPause.addEventListener('click', togglePause);
 
   addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    const tag = e.target.tagName;
+    // não sequestrar atalhos quando o foco está num controle interativo (evita duplo toggle com Espaço)
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'BUTTON' || tag === 'TEXTAREA' || tag === 'A' || e.target.isContentEditable) return;
     if (e.code === 'Space') { e.preventDefault(); togglePause(); }
     if (e.key === '+' || e.key === '=') { els.speed.value = Math.min(100, +els.speed.value + 6); els.speed.dispatchEvent(new Event('input')); }
     if (e.key === '-') { els.speed.value = Math.max(0, +els.speed.value - 6); els.speed.dispatchEvent(new Event('input')); }
@@ -1300,6 +1356,7 @@ function updateBodies(dt) {
       arr[i * 3 + 2] = wp.z + sunDir.z * len * t + jit[i * 3 + 2] * spread;
     }
     comet.tail.geometry.attributes.position.needsUpdate = true;
+    comet.orbitLine.visible = state.showOrbits;
     comet.tail.visible = state.showComet;
     comet.coma.scale.setScalar(3 + len * 0.22);
     comet.label.visible = state.showLabels;
@@ -1358,6 +1415,7 @@ function animate() {
    ========================================================================= */
 function onResize() {
   const w = window.innerWidth, h = window.innerHeight;
+  applyQuality();
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
@@ -1374,10 +1432,9 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', onRe
    ========================================================================= */
 init().then(() => {
   renderer.setAnimationLoop(animate);
+  window.SolarBoot?.ready();
 }).catch(err => {
-  console.error(err);
-  els.progressText.textContent = 'Erro ao inicializar: ' + err.message;
-  els.loading.querySelector('h2').textContent = 'Não foi possível iniciar';
+  window.SolarBoot?.fail(err, 'Não foi possível montar a cena 3D.');
 });
 </script>
 </body>
