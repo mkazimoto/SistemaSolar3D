@@ -551,6 +551,8 @@ function glowTexture(stops) {
 const SUN_RADIUS = 9.5;
 const auToScene = (au) => 9 + 19 * Math.sqrt(Math.max(au, 0));    // distância visual
 const radiusToScene = (rEarth) => 1.35 * Math.pow(rEarth, 0.55);  // raio visual
+/* LOD de geometria: corpos pequenos usam menos segmentos (imperceptível na tela) */
+const sphereGeo = (r) => new THREE.SphereGeometry(r, r < 0.3 ? 20 : r < 1 ? 32 : r < 3 ? 48 : 64, r < 0.3 ? 14 : r < 1 ? 24 : r < 3 ? 32 : 48);
 const MOON_SCALE = 0.55;
 const MOON_DIST = 1.0;
 
@@ -770,8 +772,9 @@ const comaSprite = glowTexture([
 ]);
 
 function makeAtmosphere(radius, cfg) {
+  const rs = radius * 1.055;
   return new THREE.Mesh(
-    new THREE.SphereGeometry(radius * 1.055, 48, 32),
+    new THREE.SphereGeometry(rs, radius < 1.5 ? 32 : 48, radius < 1.5 ? 20 : 32),
     new THREE.ShaderMaterial({
       uniforms: {
         uColor: { value: new THREE.Color(cfg.color) },
@@ -881,7 +884,7 @@ function buildPlanet(p) {
   else tex = rockyTexture(p.tex);
 
   const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(r, 64, 48),
+    sphereGeo(r),
     new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92, metalness: 0.0 })
   );
   axis.add(mesh);
@@ -890,7 +893,7 @@ function buildPlanet(p) {
   let clouds = null;
   if (p.earth) {
     clouds = new THREE.Mesh(
-      new THREE.SphereGeometry(r * 1.012, 48, 32),
+      sphereGeo(r * 1.012),
       new THREE.MeshStandardMaterial({ map: earthClouds(), transparent: true, opacity: 0.72, roughness: 1, depthWrite: false })
     );
     axis.add(clouds);
@@ -917,7 +920,7 @@ function buildPlanet(p) {
     mh.position.x = m.dist * MOON_DIST;
     pivot.add(mh);
     const mm = new THREE.Mesh(
-      new THREE.SphereGeometry(mr, 32, 24),
+      sphereGeo(mr),
       new THREE.MeshStandardMaterial({
         map: rockyTexture({ w: 320, h: 160, base: m.color, dark: m.color.map(c => c * 0.5), light: m.color.map(c => Math.min(255, c * 1.25)), craters: m.craters || 40, freq: 7, seed: m.seed, contrast: 1.1 }),
         roughness: 0.95
@@ -1154,7 +1157,14 @@ async function init() {
    6. Seleção e foco de câmera
    ========================================================================= */
 const tmpV = new THREE.Vector3();
+const tmpV2 = new THREE.Vector3();
+const tmpV3 = new THREE.Vector3();
+const ZERO = new THREE.Vector3();
 const worldOf = (holder) => holder.getWorldPosition(tmpV);
+
+/* Render sob demanda: marcado quando algo (UI, seleção, resize) exige um novo quadro. */
+let needsRender = true;
+const requestRender = () => { needsRender = true; };
 
 function select(body, opts = {}) {
   state.selected = body;
@@ -1166,6 +1176,7 @@ function select(body, opts = {}) {
   }
   ui.info(body.info);
   if (opts.focus !== false) focusBody(body);
+  requestRender();
 }
 
 function focusBody(body) {
@@ -1270,14 +1281,15 @@ function bindUI() {
   els.size.addEventListener('input', () => {
     state.sizeScale = +els.size.value / 100;
     els.sizeVal.textContent = state.sizeScale.toFixed(1).replace('.', ',') + '×';
+    requestRender();
   });
   els.sizeVal.textContent = state.sizeScale.toFixed(1).replace('.', ',') + '×';
 
-  els.tOrbits.addEventListener('change', () => { state.showOrbits = els.tOrbits.checked; });
-  els.tLabels.addEventListener('change', () => { state.showLabels = els.tLabels.checked; });
-  els.tBelt.addEventListener('change', () => { state.showBelt = els.tBelt.checked; });
-  els.tComet.addEventListener('change', () => { state.showComet = els.tComet.checked; });
-  els.tBloom.addEventListener('change', () => { state.bloom = els.tBloom.checked; bloom.enabled = state.bloom; });
+  els.tOrbits.addEventListener('change', () => { state.showOrbits = els.tOrbits.checked; requestRender(); });
+  els.tLabels.addEventListener('change', () => { state.showLabels = els.tLabels.checked; requestRender(); });
+  els.tBelt.addEventListener('change', () => { state.showBelt = els.tBelt.checked; requestRender(); });
+  els.tComet.addEventListener('change', () => { state.showComet = els.tComet.checked; requestRender(); });
+  els.tBloom.addEventListener('change', () => { state.bloom = els.tBloom.checked; bloom.enabled = state.bloom; requestRender(); });
 
   els.btnPause.addEventListener('click', togglePause);
 
@@ -1302,12 +1314,16 @@ function togglePause() {
    8. Loop de animação
    ========================================================================= */
 const clock = new THREE.Clock();
-let lastDateStr = '';
+let lastDayInt = -1;
 
 function kepler(M, e) {
   M = ((M % TAU) + TAU) % TAU;
   let E = M + e * Math.sin(M);
-  for (let i = 0; i < 6; i++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+  for (let i = 0; i < 6; i++) {
+    const d = (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+    E -= d;
+    if (Math.abs(d) < 1e-6) break;   // para e pequeno, converge em 2–3 iterações
+  }
   return { nu: 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2)), rr: 1 - e * Math.cos(E) };
 }
 
@@ -1326,7 +1342,7 @@ function updateBodies(dt) {
     if (b.clouds) b.clouds.rotation.y = b.spin * 1.05;
 
     // rótulos das luas só aparecem quando o planeta está próximo da câmera
-    const showMoons = state.showLabels && b.holder.getWorldPosition(new THREE.Vector3()).distanceTo(camera.position) < 95;
+    const showMoons = state.showLabels && worldOf(b.holder).distanceTo(camera.position) < 95;
 
     for (const m of b.moons) {
       m.pivot.rotation.y = (TAU * simDays) / m.data.period + (m.data.seed % 100) / 100 * TAU;
@@ -1344,8 +1360,8 @@ function updateBodies(dt) {
     const rad = auToScene(rAU);
     comet.holder.position.set(Math.cos(k.nu) * rad, Math.sin(k.nu) * rad, 0);
 
-    const wp = comet.holder.getWorldPosition(new THREE.Vector3());
-    const sunDir = wp.clone().normalize();
+    const wp = comet.holder.getWorldPosition(tmpV3);
+    const sunDir = tmpV2.copy(wp).normalize();
     const len = clamp(11 * Math.pow(1 / Math.max(rAU, 0.36), 0.75), 3.5, 52);
     const arr = comet.tailPos, jit = comet.jitter;
     for (let i = 0; i < TAIL_N; i++) {
@@ -1371,9 +1387,9 @@ function updateBodies(dt) {
   // ---- câmera segue o alvo
   if (state.follow) {
     const wp = worldOf(state.follow.holder);
-    const shift = wp.clone().sub(state.followWorld);
-    camera.position.add(shift);
-    controls.target.add(shift);
+    tmpV2.copy(wp).sub(state.followWorld);
+    camera.position.add(tmpV2);
+    controls.target.add(tmpV2);
     state.followWorld.copy(wp);
   }
   if (state.zoomAnim) {
@@ -1383,31 +1399,42 @@ function updateBodies(dt) {
     if (a.body) {
       const wp = worldOf(a.body.holder);
       controls.target.lerp(wp, ease * 0.9);
-      const to = wp.clone().add(a.dir);
-      camera.position.lerpVectors(a.from, to, ease);
-      a.from = camera.position.clone();
+      tmpV2.copy(wp).add(a.dir);
+      camera.position.lerpVectors(a.from, tmpV2, ease);
+      a.from.copy(camera.position);
     } else {
-      controls.target.lerp(new THREE.Vector3(0, 0, 0), ease * 0.85);
+      controls.target.lerp(ZERO, ease * 0.85);
       camera.position.lerp(a.dir, ease * 0.12);
     }
     if (a.t >= 1) state.zoomAnim = null;
   }
 
-  // ---- data simulada
-  const str = dateFmt.format(new Date(START + simDays * 86400000));
-  if (str !== lastDateStr) { lastDateStr = str; els.date.textContent = str; }
+  // ---- data simulada (Intl.DateTimeFormat é caro: só reformata quando o dia muda)
+  const dia = Math.floor(simDays);
+  if (dia !== lastDayInt) {
+    lastDayInt = dia;
+    els.date.textContent = dateFmt.format(new Date(START + dia * 86400000));
+  }
 }
 
 function animate() {
   const dt = Math.min(clock.getDelta(), 0.08);
-  if (!state.paused) simDays += dt * state.speed;
+  const rodando = !state.paused;
+  const animando = !!state.zoomAnim;
+  if (rodando) simDays += dt * state.speed;
 
   updateBodies(dt);
-  controls.update();
-  sunMesh.rotation.y += (state.paused ? 0 : dt * state.speed) * 0.0086;
+  const cameraMudou = controls.update();
+  if (rodando) sunMesh.rotation.y += dt * state.speed * 0.0086;
 
-  composer.render();
-  labelRenderer.render(scene, camera);
+  // Pausado e sem movimento de câmera/UI: não redesenha (economiza CPU/GPU e bateria).
+  if (rodando || animando || cameraMudou || needsRender) {
+    needsRender = false;
+    // sem bloom, renderiza direto: pula o RTT + o blit do composer e habilita o MSAA do canvas
+    if (state.bloom) composer.render();
+    else renderer.render(scene, camera);
+    labelRenderer.render(scene, camera);
+  }
 }
 
 /* =========================================================================
@@ -1422,6 +1449,7 @@ function onResize() {
   composer.setSize(w, h);
   bloom.setSize(w, h);
   labelRenderer.setSize(w, h);
+  requestRender();
 }
 addEventListener('resize', onResize);
 addEventListener('orientationchange', () => setTimeout(onResize, 150));
