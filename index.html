@@ -88,9 +88,9 @@
     border-radius:8px;padding:6px 8px;font-size:12.5px;outline:none;cursor:pointer
   }
   select option{background:#0b1020}
-  .btns{display:flex;gap:8px;margin-top:12px}
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
   button{
-    flex:1;background:rgba(255,255,255,.07);color:var(--txt);border:1px solid var(--brd);border-radius:9px;
+    flex:1 1 auto;background:rgba(255,255,255,.07);color:var(--txt);border:1px solid var(--brd);border-radius:9px;
     padding:7px 8px;font-size:12px;cursor:pointer;transition:background .18s,transform .1s
   }
   button:hover{background:rgba(255,255,255,.14)}
@@ -217,6 +217,7 @@
     <div class="row"><label for="tBloom">Brilho (bloom)</label><input type="checkbox" id="tBloom" checked></div>
     <div class="btns">
       <button id="btnPause">Pausar</button>
+      <button id="btnToday" title="Ir para a data de hoje">Hoje</button>
       <button id="btnReset">Resetar câmera</button>
     </div>
   </section>
@@ -553,6 +554,15 @@ const auToScene = (au) => 9 + 19 * Math.sqrt(Math.max(au, 0));    // distância 
 const radiusToScene = (rEarth) => 1.35 * Math.pow(rEarth, 0.55);  // raio visual
 /* LOD de geometria: corpos pequenos usam menos segmentos (imperceptível na tela) */
 const sphereGeo = (r) => new THREE.SphereGeometry(r, r < 0.3 ? 20 : r < 1 ? 32 : r < 3 ? 48 : 64, r < 0.3 ? 14 : r < 1 ? 24 : r < 3 ? 32 : 48);
+
+/* Posição heliocêntrica em UA: mesmas rotações usadas na cena (Ry(Ω)·Rx(i) sobre o ângulo
+   no plano u = ω + ν), sem a compressão de escala — serve para distâncias reais. */
+function setPosAU(out, p, u, rAU) {
+  const x = rAU * Math.cos(u), y = rAU * Math.sin(u);
+  const si = Math.sin(p.incl * DEG), ci = Math.cos(p.incl * DEG);
+  const sO = Math.sin(p.node * DEG), cO = Math.cos(p.node * DEG);
+  out.set(x * cO - y * ci * sO, y * si, -x * sO - y * ci * cO);
+}
 const MOON_SCALE = 0.55;
 const MOON_DIST = 1.0;
 
@@ -563,9 +573,12 @@ const SUN_INFO = {
   desc: 'Reúne 99,86% de toda a massa do sistema solar. A cada segundo converte 600 milhões de toneladas de hidrogênio em hélio.'
 };
 
+/* Elementos orbitais J2000 (JPL, aproximados): a em UA; incl (i), node (Ω) e w (ω, argumento
+   do periélio) em graus; M0 = anomalia média em J2000 em radianos. As posições são propagadas
+   a partir de J2000 pelo período orbital. */
 const PLANETS = [
   {
-    key: 'mercury', name: 'Mercúrio', a: 0.3871, e: 0.2056, periodYears: 0.2408, incl: 7.005, node: 48, M0: 0.2,
+    key: 'mercury', name: 'Mercúrio', a: 0.3871, e: 0.2056, periodYears: 0.2408, incl: 7.005, node: 48, w: 29.127, M0: 3.0507,
     radiusEarth: 0.383, tilt: 0.034, rotHours: 1407.6,
     tex: { type: 'rocky', base: [150, 140, 130], dark: [72, 66, 62], light: [206, 198, 188], craters: 160, freq: 8, seed: 11, contrast: 1.2 },
     atmo: { color: 0x9fb4d8, strength: 0.12, power: 4 },
@@ -573,7 +586,7 @@ const PLANETS = [
     desc: 'O menor planeta e o mais rápido: completa uma volta ao redor do Sol em apenas 88 dias, mas leva 58,6 dias para girar sobre si mesmo.'
   },
   {
-    key: 'venus', name: 'Vênus', a: 0.7233, e: 0.0068, periodYears: 0.6152, incl: 3.395, node: 77, M0: 2.95,
+    key: 'venus', name: 'Vênus', a: 0.7233, e: 0.0068, periodYears: 0.6152, incl: 3.395, node: 77, w: 54.923, M0: 0.8793,
     radiusEarth: 0.949, tilt: 177.4, rotHours: -5832.5,
     tex: { type: 'gas', seed: 21, bands: 14, contrast: 0.14, stops: [[0, [186, 152, 104]], [0.35, [226, 198, 148]], [0.6, [244, 222, 176]], [1, [206, 182, 138]]] },
     atmo: { color: 0xffd9a0, strength: 0.55, power: 2.6 },
@@ -581,7 +594,7 @@ const PLANETS = [
     desc: 'O planeta mais quente do sistema solar. A densa atmosfera de CO₂ cria um efeito estufa desenfreado — e gira ao contrário de quase todos os planetas.'
   },
   {
-    key: 'earth', name: 'Terra', a: 1.0, e: 0.0167, periodYears: 1.0, incl: 0.0, node: 0, M0: 1.4,
+    key: 'earth', name: 'Terra', a: 1.0, e: 0.0167, periodYears: 1.0, incl: 0.0, node: 0, w: 102.938, M0: 6.2390,
     radiusEarth: 1.0, tilt: 23.44, rotHours: 23.934,
     earth: true,
     atmo: { color: 0x6fb4ff, strength: 0.85, power: 2.4 },
@@ -590,7 +603,7 @@ const PLANETS = [
     desc: 'O único mundo conhecido com água líquida em abundância na superfície — e o único onde a vida foi confirmada.'
   },
   {
-    key: 'mars', name: 'Marte', a: 1.5237, e: 0.0934, periodYears: 1.8808, incl: 1.85, node: 49, M0: 4.5,
+    key: 'mars', name: 'Marte', a: 1.5237, e: 0.0934, periodYears: 1.8808, incl: 1.85, node: 49, w: 286.497, M0: 0.3384,
     radiusEarth: 0.532, tilt: 25.19, rotHours: 24.623,
     tex: { type: 'rocky', base: [176, 96, 58], dark: [104, 52, 34], light: [214, 156, 114], craters: 90, freq: 6, seed: 31, contrast: 1.15 },
     atmo: { color: 0xffb08a, strength: 0.2, power: 3.4 },
@@ -602,7 +615,7 @@ const PLANETS = [
     desc: 'Abriga o Monte Olimpo, o maior vulcão do sistema solar, com 22 km de altura — quase três Everest.'
   },
   {
-    key: 'jupiter', name: 'Júpiter', a: 5.2026, e: 0.0489, periodYears: 11.862, incl: 1.303, node: 100, M0: 3.6,
+    key: 'jupiter', name: 'Júpiter', a: 5.2026, e: 0.0489, periodYears: 11.862, incl: 1.303, node: 100, w: 274.255, M0: 0.3433,
     radiusEarth: 11.209, tilt: 3.13, rotHours: 9.925,
     tex: { type: 'gas', seed: 51, bands: 34, contrast: 0.17, spot: true,
       stops: [[0, [156, 132, 106]], [0.18, [214, 196, 166]], [0.36, [176, 138, 106]], [0.52, [232, 218, 194]],
@@ -618,7 +631,7 @@ const PLANETS = [
     desc: 'O gigante do sistema: caberiam 1.300 Terras em seu interior. A Grande Mancha Vermelha é uma tempestade maior que o nosso planeta, ativa há séculos.'
   },
   {
-    key: 'saturn', name: 'Saturno', a: 9.5549, e: 0.0565, periodYears: 29.457, incl: 2.489, node: 113, M0: 0.75,
+    key: 'saturn', name: 'Saturno', a: 9.5549, e: 0.0565, periodYears: 29.457, incl: 2.489, node: 113, w: 338.937, M0: 5.5389,
     radiusEarth: 9.449, tilt: 26.73, rotHours: 10.656,
     tex: { type: 'gas', seed: 61, bands: 22, contrast: 0.1,
       stops: [[0, [186, 164, 122]], [0.3, [226, 208, 168]], [0.55, [244, 232, 200]], [0.8, [216, 196, 156]], [1, [178, 156, 120]]] },
@@ -632,7 +645,7 @@ const PLANETS = [
     desc: 'Seus anéis se estendem por 280 mil km, mas têm em média só 10 metros de espessura. É menos denso que a água: flutuaria num oceano gigante.'
   },
   {
-    key: 'uranus', name: 'Urano', a: 19.2184, e: 0.0457, periodYears: 84.02, incl: 0.773, node: 74, M0: 2.2,
+    key: 'uranus', name: 'Urano', a: 19.2184, e: 0.0457, periodYears: 84.02, incl: 0.773, node: 74, w: 96.937, M0: 2.4833,
     radiusEarth: 4.007, tilt: 97.77, rotHours: -17.24,
     tex: { type: 'gas', seed: 71, bands: 10, contrast: 0.07,
       stops: [[0, [140, 200, 208]], [0.45, [178, 226, 232]], [1, [148, 208, 216]]] },
@@ -643,7 +656,7 @@ const PLANETS = [
     desc: 'Gira deitado: seu eixo é inclinado 98°, provavelmente por uma colisão colossal. Cada polo passa 42 anos na luz e 42 na escuridão.'
   },
   {
-    key: 'neptune', name: 'Netuno', a: 30.1104, e: 0.0113, periodYears: 164.79, incl: 1.77, node: 131, M0: 5.1,
+    key: 'neptune', name: 'Netuno', a: 30.1104, e: 0.0113, periodYears: 164.79, incl: 1.77, node: 131, w: 273.181, M0: 4.5364,
     radiusEarth: 3.883, tilt: 28.32, rotHours: 16.11,
     tex: { type: 'gas', seed: 81, bands: 14, contrast: 0.09,
       stops: [[0, [36, 68, 158]], [0.4, [66, 108, 208]], [0.7, [104, 148, 232]], [1, [46, 84, 176]]] },
@@ -661,12 +674,14 @@ const ACCENTS = {
 };
 PLANETS.forEach((p) => { p.accent = ACCENTS[p.key]; });
 
-const COMET = { a: 17.834, e: 0.967, incl: 162.26, node: 58.42, M0: 1.0, periodYears: 76.0 };
+/* 1P/Halley — elementos do retorno de 1986 (ω, Ω e inclinação J2000); período e M0
+   calibrados para reproduzir os periélios de 09/02/1986 e 28/07/2061. */
+const COMET = { a: 17.834, e: 0.967, incl: 162.26, node: 58.42, w: 111.33, M0: 1.1568, periodYears: 75.47 };
 const COMET_INFO = {
   name: '1P/Halley', tagline: 'Cometa periódico', accent: '#a8ecff',
-  items: [['Período orbital', '76 anos'], ['Periélio', '0,586 UA'], ['Afélio', '35,1 UA'], ['Inclinação', '162,3° (retrógrado)'],
+  items: [['Período orbital', '75,5 anos'], ['Periélio', '0,586 UA'], ['Afélio', '35,1 UA'], ['Inclinação', '162,3° (retrógrado)'],
     ['Último periélio', '9 de fevereiro de 1986'], ['Próximo periélio', '28 de julho de 2061']],
-  desc: 'O cometa mais famoso da história. Sua órbita retrógrada e alongada o traz de volta ao Sol a cada 76 anos.'
+  desc: 'O cometa mais famoso da história. Sua órbita retrógrada e alongada o traz de volta ao Sol a cada 75 anos.'
 };
 
 /* =========================================================================
@@ -842,7 +857,7 @@ sunGlow.scale.setScalar(SUN_RADIUS * 3.1);
 scene.add(sunGlow);
 scene.add(makeAtmosphere(SUN_RADIUS * 1.03, { color: 0xffa53c, strength: 0.55, power: 2.6 }));
 
-const sunBody = { key: 'sun', name: 'Sol', radiusVisual: SUN_RADIUS, holder: sunMesh, label: null, info: SUN_INFO, sun: true, mesh: sunMesh };
+const sunBody = { key: 'sun', name: 'Sol', radiusVisual: SUN_RADIUS, holder: sunMesh, label: null, info: SUN_INFO, sun: true, mesh: sunMesh, posAU: new THREE.Vector3() };
 sunBody.label = makeLabel('Sol', '', SUN_RADIUS + 1.8);
 scene.add(sunBody.label);
 sunMesh.userData.body = sunBody;
@@ -862,8 +877,10 @@ function buildPlanet(p) {
   for (let i = 0; i <= 320; i++) {
     const E = (i / 320) * TAU;
     const nu = 2 * Math.atan2(Math.sqrt(1 + p.e) * Math.sin(E / 2), Math.sqrt(1 - p.e) * Math.cos(E / 2));
+    const u = nu + p.w * DEG;
     const rad = auToScene(p.a * (1 - p.e * Math.cos(E)));
-    pts.push(new THREE.Vector3(Math.cos(nu) * rad, Math.sin(nu) * rad, 0));
+    // o plano orbital é o XZ (eclíptica); o eixo local Y é o polo (normal da órbita)
+    pts.push(new THREE.Vector3(Math.cos(u) * rad, 0, -Math.sin(u) * rad));
   }
   const orbitMat = new THREE.LineBasicMaterial({ color: 0x6d8fc7, transparent: true, opacity: 0.3 });
   orbitMat.userData.baseOpacity = 0.3;
@@ -932,9 +949,10 @@ function buildPlanet(p) {
     moons.push({ data: m, pivot, holder: mh, mesh: mm, label: mLabel, radiusVisual: mr });
   }
 
+  const posAU = new THREE.Vector3();   // posição heliocêntrica real (UA), atualizada no loop
   const body = {
     key: p.key, name: p.name, radiusVisual: r, holder, mesh, axis, label, moons,
-    orbitMat, orbitLine, planet: p,
+    orbitMat, orbitLine, planet: p, posAU,
     info: {
       name: p.name,
       tagline: p.radiusEarth > 3 ? 'Gigante gasoso' : 'Planeta rochoso',
@@ -946,7 +964,7 @@ function buildPlanet(p) {
   allBodies.push(body);
 
   return {
-    data: p, orbitPlane, holder, mesh, axis, label, orbitMat, orbitLine, moons, radiusVisual: r, clouds, body
+    data: p, orbitPlane, holder, mesh, axis, label, orbitMat, orbitLine, moons, radiusVisual: r, clouds, body, posAU
   };
 }
 
@@ -1015,8 +1033,9 @@ function makeComet() {
   for (let i = 0; i <= 400; i++) {
     const E = (i / 400) * TAU;
     const nu = 2 * Math.atan2(Math.sqrt(1 + COMET.e) * Math.sin(E / 2), Math.sqrt(1 - COMET.e) * Math.cos(E / 2));
+    const u = nu + COMET.w * DEG;
     const rad = auToScene(COMET.a * (1 - COMET.e * Math.cos(E)));
-    pts.push(new THREE.Vector3(Math.cos(nu) * rad, Math.sin(nu) * rad, 0));
+    pts.push(new THREE.Vector3(Math.cos(u) * rad, 0, -Math.sin(u) * rad));
   }
   const orbitMat = new THREE.LineBasicMaterial({ color: 0x7fe0ff, transparent: true, opacity: 0.22 });
   orbitMat.userData.baseOpacity = 0.22;
@@ -1050,7 +1069,7 @@ function makeComet() {
   }));
   scene.add(tail);
 
-  const body = { key: 'comet', name: '1P/Halley', radiusVisual: 1.2, holder, mesh: nucleus, label, info: COMET_INFO, comet: true, orbitMat, orbitLine };
+  const body = { key: 'comet', name: '1P/Halley', radiusVisual: 1.2, holder, mesh: nucleus, label, info: COMET_INFO, comet: true, orbitMat, orbitLine, posAU: new THREE.Vector3() };
   nucleus.userData.body = body;
   allBodies.push(body);
 
@@ -1083,8 +1102,10 @@ const els = {
   tOrbits: document.getElementById('tOrbits'), tLabels: document.getElementById('tLabels'),
   tBelt: document.getElementById('tBelt'), tComet: document.getElementById('tComet'), tBloom: document.getElementById('tBloom'),
   btnPause: document.getElementById('btnPause'), btnReset: document.getElementById('btnReset'),
+  btnToday: document.getElementById('btnToday'),
   infoName: document.getElementById('infoName'), infoTag: document.getElementById('infoTag'),
   infoList: document.getElementById('infoList'), infoDesc: document.getElementById('infoDesc'), infoDot: document.getElementById('infoDot'),
+  infoDist: null,   // criado a cada ui.info()
   progressBar: document.getElementById('progressBar'), progressText: document.getElementById('progressText'),
   loading: document.getElementById('loading'), hint: document.getElementById('hint'),
   panel: document.getElementById('panel'), panelToggle: document.getElementById('panelToggle'),
@@ -1101,7 +1122,9 @@ const ui = {
     els.infoName.textContent = data.name;
     els.infoTag.textContent = data.tagline || (data.comet ? 'Corpo menor' : '');
     els.infoTag.style.display = els.infoTag.textContent ? '' : 'none';
-    els.infoList.innerHTML = (data.items || []).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+    els.infoList.innerHTML = (data.items || []).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') +
+      '<dt>Distância da Terra</dt><dd id="infoDist">—</dd>';
+    els.infoDist = document.getElementById('infoDist');
     els.infoDesc.textContent = data.desc || '';
     const cor = data.accent || '#ffb347';
     els.infoDot.style.background = cor;
@@ -1114,9 +1137,10 @@ const ui = {
 
 const sliderToSpeed = (v) => 0.05 * Math.pow(10000, v / 100);
 
-/* data simulada */
+/* data simulada — simDays conta os dias desde a época dos elementos orbitais (J2000) */
+const J2000 = Date.UTC(2000, 0, 1, 12);
 const START = Date.UTC(2026, 0, 1);
-let simDays = 0;
+let simDays = (START - J2000) / 86400000;
 const dateFmt = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 /* =========================================================================
@@ -1124,12 +1148,13 @@ const dateFmt = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long'
    ========================================================================= */
 const nextFrame = () => new Promise((res) => requestAnimationFrame(() => setTimeout(res, 0)));
 
-let belt, kuiper, comet;
+let belt, kuiper, comet, earth;
 
 async function init() {
   ui.progress(0.05, 'Carregando three.js do CDN…');
   await nextFrame();
   await buildAll();
+  earth = built.find((b) => b.data.earth);
   ui.progress(0.8, 'Montando cinturões…');
   await nextFrame();
   belt = makeAsteroidBelt(); scene.add(belt);
@@ -1292,6 +1317,7 @@ function bindUI() {
   els.tBloom.addEventListener('change', () => { state.bloom = els.tBloom.checked; bloom.enabled = state.bloom; requestRender(); });
 
   els.btnPause.addEventListener('click', togglePause);
+  els.btnToday.addEventListener('click', goToday);
 
   addEventListener('keydown', (e) => {
     const tag = e.target.tagName;
@@ -1303,11 +1329,19 @@ function bindUI() {
     if (e.key.toLowerCase() === 'l') { els.tLabels.checked = !els.tLabels.checked; els.tLabels.dispatchEvent(new Event('change')); }
     if (e.key.toLowerCase() === 'o') { els.tOrbits.checked = !els.tOrbits.checked; els.tOrbits.dispatchEvent(new Event('change')); }
     if (e.key.toLowerCase() === 'r') els.btnReset.click();
+    if (e.key.toLowerCase() === 'h') goToday();
   });
 }
 function togglePause() {
   state.paused = !state.paused;
   els.btnPause.textContent = state.paused ? 'Retomar' : 'Pausar';
+}
+
+/* salta a simulação para a data de hoje (posições reais aproximadas) */
+function goToday() {
+  simDays = (Date.now() - J2000) / 86400000;
+  lastDayInt = -1;        // força a reformatação do rótulo de data
+  requestRender();
 }
 
 /* =========================================================================
@@ -1332,8 +1366,10 @@ function updateBodies(dt) {
   for (const b of built) {
     const p = b.data;
     const k = kepler(p.M0 + (simDays / (p.periodYears * 365.25)) * TAU, p.e);
+    const u = k.nu + p.w * DEG;              // argumento do periélio + anomalia verdadeira
     const rad = auToScene(p.a * k.rr);
-    b.holder.position.set(Math.cos(k.nu) * rad, Math.sin(k.nu) * rad, 0);
+    b.holder.position.set(Math.cos(u) * rad, 0, -Math.sin(u) * rad);
+    setPosAU(b.posAU, p, u, p.a * k.rr);     // posição real em UA (base da distância à Terra)
 
     const rotDays = Math.abs(p.rotHours) / 24;
     const rate = (TAU / rotDays) * (state.paused ? 0 : state.speed);
@@ -1356,9 +1392,11 @@ function updateBodies(dt) {
   // ---- cometa
   if (comet) {
     const k = kepler(COMET.M0 + (simDays / (COMET.periodYears * 365.25)) * TAU, COMET.e);
+    const u = k.nu + COMET.w * DEG;
     const rAU = COMET.a * k.rr;
     const rad = auToScene(rAU);
-    comet.holder.position.set(Math.cos(k.nu) * rad, Math.sin(k.nu) * rad, 0);
+    comet.holder.position.set(Math.cos(u) * rad, 0, -Math.sin(u) * rad);
+    setPosAU(comet.body.posAU, COMET, u, rAU);
 
     const wp = comet.holder.getWorldPosition(tmpV3);
     const sunDir = tmpV2.copy(wp).normalize();
@@ -1413,7 +1451,13 @@ function updateBodies(dt) {
   const dia = Math.floor(simDays);
   if (dia !== lastDayInt) {
     lastDayInt = dia;
-    els.date.textContent = dateFmt.format(new Date(START + dia * 86400000));
+    els.date.textContent = dateFmt.format(new Date(J2000 + dia * 86400000));
+  }
+
+  // ---- distância atual à Terra, a partir das posições heliocêntricas reais
+  if (earth && els.infoDist && state.selected && state.selected.posAU) {
+    const txt = earth.posAU.distanceTo(state.selected.posAU).toFixed(3).replace('.', ',') + ' UA';
+    if (els.infoDist.textContent !== txt) els.infoDist.textContent = txt;
   }
 }
 

@@ -41,16 +41,23 @@ Depois abra <http://localhost:5500>.
 | Velocidade do tempo | slider (0,05 a 500 dias por segundo) |
 | Tamanho dos astros | slider (0,4× a 3×) — não altera as órbitas |
 | Voltar à visão geral | botão **Resetar câmera** ou `R` |
-| Atalhos | `+` / `-` velocidade · `O` órbitas · `L` rótulos · `R` reset |
+| Ir para a data de hoje | botão **Hoje** ou `H` |
+| Atalhos | `+` / `-` velocidade · `O` órbitas · `L` rótulos · `R` reset · `H` hoje |
 
 Camadas que podem ser ligadas/desligadas: órbitas, rótulos, cinturão de asteroides,
 cometa 1P/Halley e o efeito de brilho (*bloom*).
 
 ## O que está simulado
 
-- **Órbitas keplerianas reais**: cada planeta usa semi-eixo maior, excentricidade,
-  inclinação e período verdadeiros; a equação de Kepler (Newton-Raphson) é resolvida
-  a cada quadro, então os planetas aceleram no periélio e desaceleram no afélio.
+- **Órbitas keplerianas reais**: cada planeta usa os elementos orbitais J2000 (semi-eixo
+  maior, excentricidade, inclinação, longitude do nodo ascendente Ω e argumento do periélio ω)
+  e a anomalia média em J2000, de modo que as posições são as **reais e aproximadas** para a
+  data simulada. A equação de Kepler (Newton-Raphson) é resolvida a cada quadro, então os
+  planetas aceleram no periélio e desaceleram no afélio.
+- **Eclíptica única**: órbitas dos planetas, cometa, cinturão de asteroides e Cinturão de
+  Kuiper ficam todos no mesmo plano, e o eixo de rotação de cada planeta é perpendicular à
+  sua órbita (inclinado pela obliquidade real) — é o que põe os anéis e as bandas na
+  orientação correta.
 - **Rotação e inclinação axial** de cada planeta (Vênus e Urano com rotação retrógrada;
   Urano com eixo inclinado 98°).
 - **Luas**: Lua, Fobos, Deimos, as quatro luas galileanas, Encélado, Titã, Titânia e Tritão,
@@ -59,7 +66,9 @@ cometa 1P/Halley e o efeito de brilho (*bloom*).
 - **Cinturão de asteroides** (1.600 rochas instanciadas), **Cinturão de Kuiper** e o
   **cometa 1P/Halley** com cauda que aponta sempre para o lado oposto ao Sol e cresce
   perto do periélio.
-- **Data simulada** exibida no cabeçalho (parte de 1º de janeiro de 2026).
+- **Data simulada** exibida no cabeçalho (parte de 1º de janeiro de 2026; o botão **Hoje**
+  salta para a data atual) e **distância atual à Terra**, calculada das posições reais, no
+  painel do astro selecionado.
 
 ### Texturas
 
