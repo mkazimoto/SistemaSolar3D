@@ -2,7 +2,7 @@
 
 Animação interativa do Sistema Solar em tempo real, feita com **Three.js** (WebGL) em um único arquivo HTML — sem build, sem instalação.
 
-![stack](https://img.shields.io/badge/three.js-0.169-6cf) ![sem build](https://img.shields.io/badge/build-nenhum-ffb347) [![Demo](https://img.shields.io/badge/demo-GitHub%20Pages-2ea44f?logo=github)](https://mkazimoto.github.io/SistemaSolar3D/)
+![stack](https://img.shields.io/badge/three.js-0.169-6cf) ![sem build](https://img.shields.io/badge/build-nenhum-ffb347) [![Demo](https://img.shields.io/badge/demo-GitHub%20Pages-2ea44f?logo=github)](https://mkazimoto.github.io/SistemaSolar3D/) [![Verificações](https://github.com/mkazimoto/SistemaSolar3D/actions/workflows/ci.yml/badge.svg)](https://github.com/mkazimoto/SistemaSolar3D/actions/workflows/ci.yml)
 
 **▶ Demo ao vivo: <https://mkazimoto.github.io/SistemaSolar3D/>** — publicado pelo GitHub Pages (veja [Publicação](#publicação)).
 
@@ -92,13 +92,41 @@ Vista aproximada de Saturno: bandas atmosféricas, anéis com a Divisão de Cass
 ## Estrutura
 
 ```
-index.html                     aplicação completa (HTML + CSS + JS em módulo)
-servidor.js                    servidor estático mínimo, sem dependências (Node)
-servir.bat                     sobe o servidor e abre o navegador
-docs/                          capturas de tela usadas neste README
-.nojekyll                      publica os arquivos como estão (sem processamento Jekyll)
-.github/workflows/deploy-pages.yml   publicação automática no GitHub Pages
+index.html                          aplicação completa (HTML + CSS + JS em módulo)
+servidor.js                         servidor estático mínimo, sem dependências (Node)
+servir.bat                          sobe o servidor e abre o navegador
+docs/                               capturas de tela usadas neste README
+.nojekyll                           publica os arquivos como estão (sem processamento Jekyll)
+.github/workflows/deploy-pages.yml  publicação automática no GitHub Pages
+.github/workflows/ci.yml            validações a cada push / pull request
+.editorconfig · .gitattributes      padronização de fim de linha e indentação
+package.json                        só ferramentas de verificação (a aplicação não depende dele)
+playwright.config.js                configuração dos testes de fumaça
+tests/smoke.spec.js                 testes de fumaça (Playwright)
+tools/check-syntax.mjs              valida a sintaxe do módulo embutido em index.html
 ```
+
+## Verificações
+
+A aplicação continua **sem build e sem dependências**: o `index.html` roda sozinho. O
+`package.json` existe apenas para as verificações de desenvolvimento — nenhum arquivo dele é
+publicado nem usado em tempo de execução.
+
+```powershell
+npm install                 # ferramentas de verificação
+npx playwright install chromium   # apenas na primeira vez
+npm run verificar           # sintaxe + HTML + testes
+```
+
+| Comando | O que verifica |
+|---|---|
+| `npm run check:syntax` | extrai o módulo ES embutido em `index.html` e valida a sintaxe com `node --check` (sem dependências — pega erro de edição/merge no arquivo principal) |
+| `npm run lint:html` | `html-validate` no `index.html` |
+| `npm test` | testes de fumaça com Playwright: montagem do HUD sem erros, controles (camadas, pausa, foco, reset), plausibilidade astronômica das distâncias à Terra, botão **Hoje** e o caso de **CDN indisponível** (que precisa mostrar erro acionável em vez de travar no *loading*) |
+
+O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda as três etapas a cada
+push na `main` e em pull requests, **em paralelo ao deploy** — a publicação não depende delas,
+então uma falha aqui aparece como aviso e não como site fora do ar.
 
 ## Publicação
 

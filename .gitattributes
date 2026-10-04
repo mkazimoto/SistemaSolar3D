@@ -1,0 +1,9 @@
+# Normaliza o texto no repositório (o working tree segue o core.autocrlf da máquina)
+* text=auto
+
+# Binários
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.webp binary

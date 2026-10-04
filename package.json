@@ -1,0 +1,20 @@
+{
+  "name": "sistema-solar-3d",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema Solar 3D — aplicação WebGL contida em um único index.html, sem build. Este package.json existe apenas para as verificações de desenvolvimento (validação de HTML e testes de fumaça); a aplicação não depende dele.",
+  "scripts": {
+    "servir": "node servidor.js",
+    "check:syntax": "node tools/check-syntax.mjs",
+    "lint:html": "html-validate index.html",
+    "test": "playwright test",
+    "verificar": "npm run check:syntax && npm run lint:html && npm test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "html-validate": "^11.16.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
